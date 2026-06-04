@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Compile-Time API Assertions — Postman CSE Demo</title>
+<title>Compile-Time API Assertions: Postman CSE Demo</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 /* ============================================================
-   TOKEN BASE — verbatim from reference light engineering doc
+   TOKEN BASE: verbatim from reference light engineering doc
    ============================================================ */
 :root{
   --navy:#0e1220; --navy-2:#131a2b;
@@ -536,7 +536,7 @@ code{
       </div>
     </div>
 
-    <p class="kicker">Postman Customer Success Engineering &mdash; Demo</p>
+    <p class="kicker">Postman Customer Success Engineering / Demo</p>
     <h1 class="doc-title">Compile-Time API Assertions</h1>
     <p class="doc-intro">A pre-merge contract gate that runs your Postman collection against the real service, in the runner, before you deploy.</p>
     <div class="doc-meta">
@@ -560,7 +560,7 @@ code{
         </tr>
         <tr>
           <td class="gl-label">What it proves</td>
-          <td class="gl-value">The running service still matches its OpenAPI contract &mdash; every required field, every declared status code, every response schema &mdash; before the PR merges.</td>
+          <td class="gl-value">The running service still matches its OpenAPI contract (every required field, every declared status code, every response schema) before the PR merges.</td>
         </tr>
         <tr>
           <td class="gl-label">Where it runs</td>
@@ -568,7 +568,7 @@ code{
         </tr>
         <tr>
           <td class="gl-label">When it fails</td>
-          <td class="gl-value">A response stops matching the spec &mdash; a required field is dropped, a schema type drifts, an undocumented status code appears.</td>
+          <td class="gl-value">A response stops matching the spec: a required field is dropped, a schema type drifts, or an undocumented status code appears.</td>
         </tr>
         <tr>
           <td class="gl-label">Cost</td>
@@ -588,16 +588,16 @@ code{
 
     <p>A collection that replays the happy-path flow proves the flow you intended works. It does not prove the compiled service actually behaves to spec. The collection asserts the journey ran; it does not assert the shape of every response.</p>
 
-    <p>To assert runtime correctness you build the service in your runner, mount it, and run the contract collection against the running process. That catches drift before the PR ever merges &mdash; before any deploy to a gateway or APIM, before any downstream consumer can observe a broken contract.</p>
+    <p>To assert runtime correctness you build the service in your runner, mount it, and run the contract collection against the running process. That catches drift before the PR ever merges, before any deploy to a gateway or APIM, before any downstream consumer can observe a broken contract.</p>
 
     <p>This came out of a conversation with Andrew about what a Postman collection actually proves. The observation:</p>
 
     <blockquote class="bq">
       You compile, mount, run the collection against the runtime in the runner, and if it passes, then you push.
-      <span class="attr">Paraphrased &mdash; conversation with Andrew, CSE</span>
+      <span class="attr">Paraphrased from a conversation with Andrew, CSE</span>
     </blockquote>
 
-    <p>The insight is small but load-bearing. The spec authors intent. The collection replays behavior. Combining them &mdash; running the collection against a freshly compiled image in CI &mdash; closes the gap between what the spec says and what the binary does.</p>
+    <p>The insight is small but load-bearing. The spec authors intent. The collection replays behavior. Combining them (running the collection against a freshly compiled image in CI) closes the gap between what the spec says and what the binary does.</p>
   </div>
 
   <!-- SECTION 02: THE LOOP -->
@@ -632,7 +632,7 @@ code{
     <div class="panel-grid">
       <div class="panel">
         <div class="panel-heading">Layer 1</div>
-        <h3>Smoke &mdash; curated journey</h3>
+        <h3>Smoke: Curated Journey</h3>
         <p class="panel-body">The human-authored workflow asset. Documents the intended happy path and is the thing another team forks to understand how your API works.</p>
         <ul>
           <li>Asserts the journey runs: 2xx responses, response bodies present, IDs chain between requests</li>
@@ -642,7 +642,7 @@ code{
       </div>
       <div class="panel">
         <div class="panel-heading">Layer 2</div>
-        <h3>Contract &mdash; the drift detector</h3>
+        <h3>Contract: Drift Detector</h3>
         <p class="panel-body">Generated from the spec. Validates every response body against the full OpenAPI schema, including required fields, types, and formats.</p>
         <ul>
           <li>Catches any response that diverges from the declared schema</li>
@@ -652,21 +652,21 @@ code{
       </div>
     </div>
 
-    <p>The demo proves this independence directly: remove the required <code>price.currency</code> field from the Flask service response. The contract run goes red &mdash; it enforces the schema and sees the violation. The smoke run stays green &mdash; it never asserts <code>price.currency</code>. Two collections, two different failure classes, one run.</p>
+    <p>The demo proves this independence directly: remove the required <code>price.currency</code> field from the Flask service response. The contract run goes red; it enforces the schema and sees the violation. The smoke run stays green; it never asserts <code>price.currency</code>. Two collections, two different failure classes, one run.</p>
   </div>
 
   <!-- SECTION 04: DO BOTH -->
   <div class="section" id="do-both">
     <div class="section-header">
       <span class="sec-no">04</span>
-      <h2>Do Both &mdash; and Why</h2>
+      <h2>Do Both, and Why</h2>
     </div>
     <hr class="section-rule">
 
     <div class="panel note">
       <div class="panel-title">Pre-merge and post-deploy cover different failure classes</div>
       <p class="panel-body">The pre-merge gate is fast and cheap and blocks the merge. It runs against <code>localhost</code> with stubbed upstreams, so it cannot see environment-specific configuration failures, IAM permission gaps, network routing errors, or failures that depend on real downstream dependencies.</p>
-      <p class="panel-body">The post-deploy run of the same collection, fired against the live deployed service, catches those. Real auth, real infrastructure, real response times &mdash; that run exercises everything the pre-merge gate cannot reach.</p>
+      <p class="panel-body">The post-deploy run of the same collection, fired against the live deployed service, catches those. Real auth, real infrastructure, real response times: that run exercises everything the pre-merge gate cannot reach.</p>
       <p class="panel-body">The pre-merge gate is necessary and fast. The post-deploy run is necessary and broad. Run the collection in both places.</p>
     </div>
   </div>
