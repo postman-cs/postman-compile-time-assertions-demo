@@ -97,8 +97,9 @@ the next clean run.
 - Nothing Postman-generated is committed. `.postman/` and `postman/collections|environments/`
   are gitignored; CI uploads them as artifacts instead.
 - Keep the service tiny. The point is the gate, so do not grow `app/` into a real backend.
-- The gate depends on the published `postman-cs/postman-*-action@v0` actions; PR runs need the
-  branch to live in this repo (a fork will not receive the secret).
+- The gate depends on the pinned `postman-cs/postman-*-action` releases (see the `uses:` refs in
+  `contract-gate.yml`); bump those tags to upgrade. PR runs need the branch to live in this repo
+  (a fork will not receive the secret).
 - Inputs/outputs in the workflows use kebab-case, matching the actions.
 
 ## Anti-patterns

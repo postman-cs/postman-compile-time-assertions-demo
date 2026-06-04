@@ -26,12 +26,12 @@ jobs:
 
       # --- Onboard Postman assets (managed CSE actions) ---------------------
       - id: token
-        uses: postman-cs/postman-resolve-service-token-action@v0
+        uses: postman-cs/postman-resolve-service-token-action@v0.1.1
         with:
           postman-api-key: ${{ secrets.POSTMAN_API_KEY }}
 
       - id: bootstrap
-        uses: postman-cs/postman-bootstrap-action@v0
+        uses: postman-cs/postman-bootstrap-action@v0.13.1
         with:
           project-name: ${{ env.PROJECT_NAME }}
           spec-path: openapi/openapi.yaml
@@ -42,7 +42,7 @@ jobs:
           postman-access-token: ${{ steps.token.outputs.token }}
 
       - id: smoke_flow
-        uses: postman-cs/postman-smoke-flow-action@v0
+        uses: postman-cs/postman-smoke-flow-action@v0.2.1
         with:
           project-name: ${{ env.PROJECT_NAME }}
           workspace-id: ${{ steps.bootstrap.outputs.workspace-id }}
@@ -54,7 +54,7 @@ jobs:
           postman-api-key: ${{ secrets.POSTMAN_API_KEY }}
 
       - id: repo_sync
-        uses: postman-cs/postman-repo-sync-action@v0
+        uses: postman-cs/postman-repo-sync-action@v0.13.1
         with:
           project-name: ${{ env.PROJECT_NAME }}
           workspace-id: ${{ steps.bootstrap.outputs.workspace-id }}
