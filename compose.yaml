@@ -8,8 +8,11 @@ services:
     environment:
       # stub upstreams by default: deterministic, no network on the request path.
       UPSTREAM_MODE: ${UPSTREAM_MODE:-stub}
-      # set DROP_CURRENCY=true to demonstrate the contract gate firing.
-      DROP_CURRENCY: ${DROP_CURRENCY:-false}
+      # DEMO BREAK: this branch ships the service with the required price.currency
+      # field dropped from its responses. The spec still requires currency, so the
+      # contract collection goes red while the curated smoke collection stays green.
+      # On main this is ${DROP_CURRENCY:-false}.
+      DROP_CURRENCY: "true"
     healthcheck:
       # python:3.12-slim does not ship curl, so probe with urllib instead of
       # adding an apt layer. CI readiness still curls from the runner.
