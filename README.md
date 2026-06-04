@@ -117,6 +117,8 @@ Then:
    `Response body matches OpenAPI schema`, and smoke stays green.
 
 Each run cleans up its own Postman workspace, so you can run it as many times as you like.
+Both checks run on any pull request opened in this repo, not only the two branches above —
+the gate fires on every PR. Once the Docker layer is cached it adds a few seconds to CI.
 
 ## Run it locally
 
