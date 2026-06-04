@@ -1,0 +1,228 @@
+openapi: 3.0.3
+info:
+  title: Subscription Decision Service
+  version: 1.0.0
+  description: |
+    Decides whether a customer is eligible for a subscription SKU and at what
+    price. The service consults two upstreams (account standing and pricing) and
+    returns a decision record. This spec is the source of truth: the contract
+    collection generated from it is replayed against the running service in CI to
+    catch schema drift before merge.
+  x-owner: customer-success-engineering
+  x-domain: subscription-decisioning
+  x-api-lifecycle: compile-time-assertions-demo
+servers:
+  - url: https://decisions.demo.postman.example
+    description: Logical service base URL; CI overrides baseUrl to the local container.
+tags:
+  - name: health
+    description: Liveness probe.
+  - name: decisions
+    description: Subscription eligibility and pricing decisions.
+paths:
+  /health:
+    get:
+      tags:
+        - health
+      summary: Liveness probe
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service is up
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              examples:
+                ok:
+                  value:
+                    status: ok
+  /decisions:
+    post:
+      tags:
+        - decisions
+      summary: Create a subscription decision
+      operationId: createDecision
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecisionRequest'
+            examples:
+              fiber:
+                value:
+                  customerId: cust_123
+                  sku: fiber_1g
+      responses:
+        '200':
+          description: Decision created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DecisionResponse'
+              examples:
+                eligible:
+                  value:
+                    decisionId: dec_demo_0001
+                    customerId: cust_123
+                    sku: fiber_1g
+                    eligible: true
+                    price:
+                      amount: 89
+                      currency: USD
+                    reasons:
+                      - ACCOUNT_IN_GOOD_STANDING
+                      - TENURE_DISCOUNT_APPLIED
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /decisions/{decisionId}:
+    get:
+      tags:
+        - decisions
+      summary: Get a decision by id
+      operationId: getDecision
+      parameters:
+        - name: decisionId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^dec_[A-Za-z0-9]+$'
+            default: dec_demo_0001
+            example: dec_demo_0001
+      responses:
+        '200':
+          description: Decision found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DecisionResponse'
+              examples:
+                seeded:
+                  value:
+                    decisionId: dec_demo_0001
+                    customerId: cust_123
+                    sku: fiber_1g
+                    eligible: true
+                    price:
+                      amount: 89
+                      currency: USD
+                    reasons:
+                      - ACCOUNT_IN_GOOD_STANDING
+                      - TENURE_DISCOUNT_APPLIED
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  responses:
+    BadRequest:
+      description: The request was malformed or referenced an unknown SKU
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            default:
+              value:
+                code: INVALID_REQUEST
+                message: customerId and sku are required
+    NotFound:
+      description: The decision was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            default:
+              value:
+                code: NOT_FOUND
+                message: decision not found
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
+    DecisionRequest:
+      type: object
+      required:
+        - customerId
+        - sku
+      properties:
+        customerId:
+          type: string
+          example: cust_123
+        sku:
+          type: string
+          enum:
+            - fiber_1g
+            - fiber_500m
+            - mobile_unlimited
+          example: fiber_1g
+    Money:
+      type: object
+      required:
+        - amount
+        - currency
+      properties:
+        amount:
+          type: number
+          format: double
+          minimum: 0
+          example: 89
+        currency:
+          type: string
+          enum:
+            - USD
+            - EUR
+            - GBP
+          example: USD
+    DecisionResponse:
+      type: object
+      required:
+        - decisionId
+        - customerId
+        - sku
+        - eligible
+        - price
+        - reasons
+      properties:
+        decisionId:
+          type: string
+          example: dec_demo_0001
+        customerId:
+          type: string
+          example: cust_123
+        sku:
+          type: string
+          example: fiber_1g
+        eligible:
+          type: boolean
+        price:
+          $ref: '#/components/schemas/Money'
+        reasons:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            enum:
+              - ACCOUNT_IN_GOOD_STANDING
+              - ACCOUNT_NOT_ELIGIBLE
+              - TENURE_DISCOUNT_APPLIED
+              - PROMO_APPLIED
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          example: INVALID_REQUEST
+        message:
+          type: string
+          example: customerId and sku are required

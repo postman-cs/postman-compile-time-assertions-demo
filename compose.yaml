@@ -1,0 +1,23 @@
+services:
+  api:
+    build: .
+    ports:
+      # CI runners are clean, so 8080 is the default. Override HOST_PORT locally
+      # if something already owns 8080 (e.g. HOST_PORT=18080 docker compose up).
+      - "127.0.0.1:${HOST_PORT:-8080}:8080"
+    environment:
+      # stub upstreams by default: deterministic, no network on the request path.
+      UPSTREAM_MODE: ${UPSTREAM_MODE:-stub}
+      # set DROP_CURRENCY=true to demonstrate the contract gate firing.
+      DROP_CURRENCY: ${DROP_CURRENCY:-false}
+    healthcheck:
+      # python:3.12-slim does not ship curl, so probe with urllib instead of
+      # adding an apt layer. CI readiness still curls from the runner.
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/health').status==200 else 1)"
+      interval: 5s
+      timeout: 3s
+      retries: 10

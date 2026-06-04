@@ -1,0 +1,143 @@
+name: Contract Gate
+
+# The compile-time assertion: build the service in the runner, run it, replay the
+# Postman contract collection against it, fail the PR on schema drift. Everything
+# is ephemeral -- each run creates its own Postman workspace and deletes it in the
+# always() teardown, so the demo is re-runnable from a clean slate and leaves no
+# residue on the shared team.
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: contract-gate-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  contract-gate:
+    runs-on: ubuntu-24.04
+    env:
+      # Unique per run so concurrent or re-run jobs never collide on the shared team.
+      PROJECT_NAME: cta-demo-${{ github.run_id }}-${{ github.run_attempt }}
+      UPSTREAM_MODE: stub
+    steps:
+      - uses: actions/checkout@v4
+
+      # --- Onboard Postman assets (managed CSE actions) ---------------------
+      - id: token
+        uses: postman-cs/postman-resolve-service-token-action@v0
+        with:
+          postman-api-key: ${{ secrets.POSTMAN_API_KEY }}
+
+      - id: bootstrap
+        uses: postman-cs/postman-bootstrap-action@v0
+        with:
+          project-name: ${{ env.PROJECT_NAME }}
+          spec-path: openapi/openapi.yaml
+          collection-sync-mode: refresh
+          spec-sync-mode: update
+          postman-stack: prod
+          postman-api-key: ${{ secrets.POSTMAN_API_KEY }}
+          postman-access-token: ${{ steps.token.outputs.token }}
+
+      - id: smoke_flow
+        uses: postman-cs/postman-smoke-flow-action@v0
+        with:
+          project-name: ${{ env.PROJECT_NAME }}
+          workspace-id: ${{ steps.bootstrap.outputs.workspace-id }}
+          spec-id: ${{ steps.bootstrap.outputs.spec-id }}
+          smoke-collection-id: ${{ steps.bootstrap.outputs.smoke-collection-id }}
+          flow-path: postman/flows/smoke.flow.yaml
+          spec-path: openapi/openapi.yaml
+          secrets-resolver-enabled: "false"
+          postman-api-key: ${{ secrets.POSTMAN_API_KEY }}
+
+      - id: repo_sync
+        uses: postman-cs/postman-repo-sync-action@v0
+        with:
+          project-name: ${{ env.PROJECT_NAME }}
+          workspace-id: ${{ steps.bootstrap.outputs.workspace-id }}
+          spec-id: ${{ steps.bootstrap.outputs.spec-id }}
+          spec-path: openapi/openapi.yaml
+          baseline-collection-id: ${{ steps.bootstrap.outputs.baseline-collection-id }}
+          smoke-collection-id: ${{ steps.smoke_flow.outputs.smoke-collection-id }}
+          contract-collection-id: ${{ steps.bootstrap.outputs.contract-collection-id }}
+          environments-json: '["ci"]'
+          env-runtime-urls-json: '{"ci":"http://127.0.0.1:8080"}'
+          monitor-type: cli
+          generate-ci-workflow: "false"
+          repo-write-mode: none
+          org-mode: "false"
+          postman-api-key: ${{ secrets.POSTMAN_API_KEY }}
+          postman-access-token: ${{ steps.token.outputs.token }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # --- Build + run the service in the runner ----------------------------
+      - name: Install Postman CLI
+        run: curl -o- "https://dl-cli.pstmn.io/install/unix.sh" | sh
+
+      - name: Build and start the service
+        run: docker compose up -d --build
+
+      - name: Wait for readiness
+        run: |
+          for _ in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8080/health; then echo; echo "service ready"; exit 0; fi
+            sleep 2
+          done
+          echo "service did not become ready"; docker compose logs; exit 1
+
+      # --- Replay Postman collections against the running service -----------
+      - name: Resolve Postman resource UIDs
+        run: ruby scripts/resolve-postman-resources.rb
+
+      - name: Postman login
+        run: postman login --with-api-key "${{ secrets.POSTMAN_API_KEY }}"
+
+      - name: Prepare report dir
+        run: mkdir -p "$RUNNER_TEMP/postman-junit"
+
+      - name: Smoke collection (curated journey)
+        run: |
+          postman collection run "$POSTMAN_SMOKE_COLLECTION_UID" \
+            --environment "$POSTMAN_ENVIRONMENT_UID" \
+            --env-var "baseUrl=http://127.0.0.1:8080" \
+            --env-var "CI=true" \
+            --reporters cli,junit \
+            --reporter-junit-export "$RUNNER_TEMP/postman-junit/smoke.xml"
+
+      - name: Contract collection (the gate)
+        run: |
+          postman collection run "$POSTMAN_CONTRACT_COLLECTION_UID" \
+            --environment "$POSTMAN_ENVIRONMENT_UID" \
+            --env-var "baseUrl=http://127.0.0.1:8080" \
+            --env-var "CI=true" \
+            --reporters cli,junit \
+            --reporter-junit-export "$RUNNER_TEMP/postman-junit/contract.xml"
+
+      # --- Artifacts + always() cleanup -------------------------------------
+      - name: Upload Postman reports and v3 exports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: postman-artifacts-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/postman-junit/*.xml
+            postman/collections/**
+            postman/environments/**
+            .postman/resources.yaml
+          if-no-files-found: warn
+
+      - name: Tear down the Postman workspace
+        if: always()
+        env:
+          POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
+        run: |
+          node scripts/teardown-postman.mjs \
+            --workspace-id="${{ steps.bootstrap.outputs.workspace-id }}" \
+            --mock-url="${{ steps.repo_sync.outputs.mock-url }}"
+
+      - name: Stop the service
+        if: always()
+        run: docker compose down -v || true

@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Compile-Time API Assertions — Postman CSE Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   TOKEN BASE — verbatim from reference light engineering doc
+   ============================================================ */
+:root{
+  --navy:#0e1220; --navy-2:#131a2b;
+  --grid-minor:rgba(255,255,255,.06); --grid-major:rgba(255,255,255,.11);
+  --hair:rgba(255,255,255,.10);
+  --fg:#f5f7fb; --muted:#aeb8c6; --soft:#d9e2ec; --faint:#79839a;
+  --orange:#FF6C37; --orange-line:rgba(255,108,55,.6);
+  --green:#42d392;
+  --blue:#7bb7ff;
+  --amber:#ffb171;
+  --red:#ff6868;
+  --panel:linear-gradient(rgba(255,255,255,.068),rgba(255,255,255,.035));
+  --panel-strong:rgba(255,255,255,.09); --border:rgba(255,255,255,.12);
+  --blur:blur(8px); --shadow:0 24px 80px rgba(0,0,0,.38);
+  --font-ui:"Inter",-apple-system,"Helvetica Neue",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono","SF Mono",ui-monospace,Menlo,monospace;
+  --r-card:18px; --r-sub:14px; --r-code:12px; --r-pill:999px;
+  --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px; --s8:64px;
+  --plate:#f4f6f9;
+
+  /* LIGHT PAGE OVERRIDES */
+  --body-bg:#f4f6f9;
+  --article-bg:#ffffff;
+  --grid-minor-light:rgba(14,18,32,.035);
+  --grid-major-light:rgba(14,18,32,.07);
+  --orange-ink:#d43800;
+  --orange-line-light:rgba(212,56,0,.55);
+  --ink:#0e1220;
+  --ink-2:#2a3244;
+  --ink-muted:#4a5568;
+  --ink-faint:#8896aa;
+  --card-bg:#ffffff;
+  --card-border:#dce3ed;
+  --card-shadow:0 2px 12px rgba(14,18,32,.07), 0 1px 3px rgba(14,18,32,.05);
+  --row-sep:#e5eaf2;
+}
+
+/* ============================================================
+   RESET + BASE
+   ============================================================ */
+*{box-sizing:border-box;margin:0;padding:0}
+
+html,body{
+  -webkit-print-color-adjust:exact;
+  print-color-adjust:exact;
+}
+
+body{
+  font-family:var(--font-ui);
+  font-size:15px;
+  line-height:1.6;
+  color:var(--ink);
+  background-color:var(--body-bg);
+  background-image:
+    linear-gradient(var(--grid-minor-light) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-minor-light) 1px, transparent 1px),
+    linear-gradient(var(--grid-major-light) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-major-light) 1px, transparent 1px);
+  background-size:40px 40px, 40px 40px, 200px 200px, 200px 200px;
+  background-position:-1px -1px;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ============================================================
+   LAYOUT SHELL
+   ============================================================ */
+.shell{max-width:920px;margin:0 auto;padding:28px 20px 80px}
+
+/* ============================================================
+   ARTICLE CARD
+   ============================================================ */
+article{
+  background:var(--card-bg);
+  border:1px solid #c8d2e0;
+  border-radius:var(--r-card);
+  padding:52px 60px;
+  box-shadow:0 4px 20px rgba(14,18,32,.09), 0 1px 4px rgba(14,18,32,.06);
+  position:relative;
+}
+
+/* Orange L crop-marks at all four corners */
+article::before{
+  content:"";
+  position:absolute;
+  inset:18px;
+  pointer-events:none;
+  z-index:1;
+  background:
+    linear-gradient(var(--orange-ink),var(--orange-ink)) 0 0/24px 2px no-repeat,
+    linear-gradient(var(--orange-ink),var(--orange-ink)) 0 0/2px 24px no-repeat,
+    linear-gradient(var(--orange-ink),var(--orange-ink)) 100% 0/24px 2px no-repeat,
+    linear-gradient(var(--orange-ink),var(--orange-ink)) 100% 0/2px 24px no-repeat,
+    linear-gradient(var(--orange-ink),var(--orange-ink)) 0 100%/24px 2px no-repeat,
+    linear-gradient(var(--orange-ink),var(--orange-ink)) 0 100%/2px 24px no-repeat,
+    linear-gradient(var(--orange-ink),var(--orange-ink)) 100% 100%/24px 2px no-repeat,
+    linear-gradient(var(--orange-ink),var(--orange-ink)) 100% 100%/2px 24px no-repeat;
+  opacity:.35;
+}
+
+/* ============================================================
+   DOCUMENT HEADER
+   ============================================================ */
+.doc-header{
+  position:relative;
+  padding-bottom:32px;
+  margin-bottom:36px;
+  border-bottom:1px solid var(--row-sep);
+}
+
+.header-lockup{display:flex;align-items:center;gap:14px;margin-bottom:22px;flex-wrap:wrap}
+
+.logo-postman-tile{
+  background:var(--navy);
+  border-radius:10px;
+  padding:8px 14px;
+  display:flex;align-items:center;
+  height:44px;
+}
+.logo-postman-tile svg{height:26px;width:auto;display:block}
+
+/* ============================================================
+   KICKER / EYEBROW / TITLE / INTRO / META
+   ============================================================ */
+.eyebrow{
+  font-family:var(--font-mono);
+  font-size:11.5px;
+  font-weight:600;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:var(--orange-ink);
+}
+.kicker{
+  font-family:var(--font-mono);
+  font-size:11.5px;
+  font-weight:600;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:var(--orange-ink);
+  margin-bottom:10px;
+}
+.doc-header .doc-title{
+  font-size:28px;
+  font-weight:800;
+  line-height:1.18;
+  color:var(--ink);
+  margin:0 0 16px;
+  letter-spacing:-.02em;
+}
+.doc-intro{
+  font-size:15.5px;
+  line-height:1.65;
+  color:var(--ink-2);
+  font-style:italic;
+  margin-bottom:16px;
+}
+.doc-meta{
+  display:flex;gap:20px;flex-wrap:wrap;
+  font-family:var(--font-mono);
+  font-size:11px;
+  letter-spacing:.06em;
+  color:var(--ink-faint);
+  text-transform:uppercase;
+}
+.doc-meta span{display:flex;align-items:center;gap:6px}
+.doc-meta span::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--orange-ink);opacity:.7}
+
+/* ============================================================
+   GLANCE TABLE
+   ============================================================ */
+.glance-table{
+  width:100%;
+  border-collapse:collapse;
+  margin:0 0 8px;
+  font-size:13.5px;
+}
+.glance-table tr{border-bottom:1px solid var(--row-sep)}
+.glance-table tr:last-child{border-bottom:none}
+.glance-table td{padding:9px 0;vertical-align:top}
+.glance-table td.gl-label{
+  font-family:var(--font-mono);
+  font-size:11px;
+  font-weight:600;
+  letter-spacing:.10em;
+  text-transform:uppercase;
+  color:var(--ink-faint);
+  width:190px;
+  padding-right:20px;
+  white-space:nowrap;
+}
+.glance-table td.gl-value{color:var(--ink-2);line-height:1.5}
+
+/* ============================================================
+   SECTION HEADING STRUCTURE
+   ============================================================ */
+.section{margin:44px 0 0}
+.section-header{display:flex;align-items:baseline;gap:12px;margin-bottom:16px}
+.sec-no{
+  font-family:var(--font-mono);
+  font-size:12px;
+  font-weight:600;
+  letter-spacing:.12em;
+  color:var(--ink-faint);
+  min-width:28px;
+  flex-shrink:0;
+}
+.section h2{
+  font-size:19px;
+  font-weight:700;
+  color:var(--ink);
+  letter-spacing:-.01em;
+  line-height:1.2;
+  border-bottom:none;
+}
+.section h3{
+  font-size:15px;
+  font-weight:700;
+  color:var(--ink);
+  letter-spacing:-.005em;
+}
+.section-rule{
+  height:1px;
+  background:var(--row-sep);
+  border:none;
+  margin:0 0 20px;
+}
+
+/* ============================================================
+   BODY TEXT
+   ============================================================ */
+.section p{margin:0 0 14px;font-size:15px;line-height:1.65;color:var(--ink-2)}
+.section p.lead{
+  font-size:15px;
+  font-weight:600;
+  color:var(--ink);
+  margin:12px 0 8px;
+}
+.section ul{margin:4px 0 16px 0;padding-left:0;list-style:none}
+.section ul li{
+  font-size:14.5px;
+  line-height:1.6;
+  color:var(--ink-2);
+  padding:5px 0 5px 20px;
+  border-bottom:1px solid var(--row-sep);
+  position:relative;
+}
+.section ul li:last-child{border-bottom:none}
+.section ul li::before{
+  content:"";
+  position:absolute;
+  left:0;top:14px;
+  width:6px;height:6px;
+  border-radius:50%;
+  background:var(--orange-ink);
+  opacity:.55;
+}
+
+/* Numbered list variant */
+.section ol.flow-list{
+  margin:4px 0 16px 0;
+  padding-left:0;
+  list-style:none;
+  counter-reset:flow-counter;
+}
+.section ol.flow-list li{
+  font-size:14.5px;
+  line-height:1.6;
+  color:var(--ink-2);
+  padding:9px 0 9px 36px;
+  border-bottom:1px solid var(--row-sep);
+  position:relative;
+  counter-increment:flow-counter;
+}
+.section ol.flow-list li:last-child{border-bottom:none}
+.section ol.flow-list li::before{
+  content:counter(flow-counter);
+  position:absolute;
+  left:0;top:8px;
+  width:22px;height:22px;
+  border-radius:50%;
+  background:var(--orange-ink);
+  color:#fff;
+  font-family:var(--font-mono);
+  font-size:10px;
+  font-weight:600;
+  display:flex;align-items:center;justify-content:center;
+  line-height:1;
+}
+
+code{
+  font-family:var(--font-mono);
+  font-size:12.5px;
+  background:#f0f4fa;
+  border:1px solid #dce3ed;
+  border-radius:5px;
+  padding:1px 6px;
+  color:#0e1220;
+}
+
+/* ============================================================
+   BLOCKQUOTE
+   ============================================================ */
+.bq{
+  position:relative;
+  padding:20px 20px 18px 56px;
+  margin:20px 0;
+  background:#fafbfd;
+  border:1px solid var(--card-border);
+  border-left:3px solid var(--orange-ink);
+  border-radius:0 var(--r-sub) var(--r-sub) 0;
+  font-size:15.5px;
+  line-height:1.6;
+  color:var(--ink-2);
+  font-style:italic;
+}
+.bq::before{
+  content:"\201C";
+  position:absolute;
+  left:14px;top:-4px;
+  font:700 52px/.8 var(--font-ui);
+  color:var(--orange-ink);
+  opacity:.6;
+}
+.bq .attr{
+  display:block;
+  margin-top:10px;
+  font-family:var(--font-mono);
+  font-size:11px;
+  letter-spacing:.05em;
+  color:var(--ink-faint);
+  font-style:normal;
+  text-transform:uppercase;
+}
+
+/* ============================================================
+   CALLOUT PANELS
+   ============================================================ */
+.panel{
+  background:var(--card-bg);
+  border:1px solid var(--card-border);
+  border-radius:var(--r-sub);
+  padding:16px 20px;
+  margin:20px 0;
+  box-shadow:0 1px 6px rgba(14,18,32,.04);
+  font-size:14.5px;
+  line-height:1.65;
+}
+.panel.note{
+  border-left:3px solid #e6940a;
+  background:#fffdf5;
+}
+.panel.win{
+  border-left:3px solid #1f9d6b;
+  background:#f3fdf8;
+}
+.panel .panel-title{
+  font-size:13.5px;
+  font-weight:700;
+  color:var(--ink);
+  margin-bottom:8px;
+  display:flex;align-items:center;gap:8px;
+}
+.panel.note .panel-title::before{
+  content:"";
+  display:inline-block;width:8px;height:8px;border-radius:50%;
+  background:#e6940a;flex-shrink:0;
+}
+.panel.win .panel-title::before{
+  content:"";
+  display:inline-block;width:8px;height:8px;border-radius:50%;
+  background:#1f9d6b;flex-shrink:0;
+}
+.panel p,.panel .panel-body{
+  color:var(--ink-2);
+  font-size:14.5px;
+  line-height:1.65;
+  margin:0 0 8px;
+}
+.panel p:last-child,.panel .panel-body:last-child{margin-bottom:0}
+
+/* ============================================================
+   TWO-COLUMN PANEL GRID
+   ============================================================ */
+.panel-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+  margin:20px 0;
+}
+@media(max-width:640px){
+  .panel-grid{grid-template-columns:1fr}
+}
+.panel-grid .panel{margin:0}
+.panel-grid .panel .panel-heading{
+  font-family:var(--font-mono);
+  font-size:11px;
+  font-weight:600;
+  letter-spacing:.10em;
+  text-transform:uppercase;
+  color:var(--ink-faint);
+  margin-bottom:6px;
+}
+.panel-grid .panel h3{
+  font-size:15px;
+  font-weight:700;
+  color:var(--ink);
+  margin-bottom:10px;
+}
+.panel-grid .panel ul{
+  margin:8px 0 0;
+  padding-left:0;
+  list-style:none;
+}
+.panel-grid .panel ul li{
+  font-size:13.5px;
+  line-height:1.55;
+  color:var(--ink-2);
+  padding:4px 0 4px 18px;
+  border-bottom:1px solid var(--row-sep);
+  position:relative;
+}
+.panel-grid .panel ul li:last-child{border-bottom:none}
+.panel-grid .panel ul li::before{
+  content:"";
+  position:absolute;
+  left:0;top:12px;
+  width:5px;height:5px;
+  border-radius:50%;
+  background:var(--orange-ink);
+  opacity:.55;
+}
+
+/* ============================================================
+   VALIDATED FOOTER BOX
+   ============================================================ */
+.validated-box{
+  margin:32px 0 0;
+  border:1px solid var(--card-border);
+  border-radius:var(--r-sub);
+  background:#fafbfd;
+  padding:16px 20px;
+}
+.validated-box .vb-label{
+  font-family:var(--font-mono);
+  font-size:10.5px;
+  font-weight:600;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:var(--ink-faint);
+  margin-bottom:10px;
+}
+.validated-box ul{
+  padding-left:0;
+  list-style:none;
+  margin:0;
+}
+.validated-box ul li{
+  font-family:var(--font-mono);
+  font-size:12px;
+  color:var(--ink-2);
+  padding:4px 0;
+  border-bottom:1px solid var(--row-sep);
+}
+.validated-box ul li:last-child{border-bottom:none}
+.validated-box ul li::before{
+  content:"+ ";
+  color:var(--orange-ink);
+  font-weight:600;
+}
+
+/* ============================================================
+   DOCUMENT FOOTER
+   ============================================================ */
+.doc-footer{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-top:48px;
+  padding-top:18px;
+  border-top:1px solid var(--row-sep);
+  font-family:var(--font-mono);
+  font-size:11px;
+  letter-spacing:.06em;
+  color:var(--ink-faint);
+}
+.doc-footer .brand{display:flex;align-items:center;gap:8px}
+.doc-footer .brand-dot{width:8px;height:8px;border-radius:50%;background:var(--orange-ink)}
+
+/* ============================================================
+   SECTION SPACING
+   ============================================================ */
+.section + .section{padding-top:0}
+
+/* ============================================================
+   PRINT
+   ============================================================ */
+@media print{
+  figure,.diagram-wrap,.panel,.bq,.glance-table,.panel-grid,.validated-box,.doc-footer{
+    break-inside:avoid;
+    page-break-inside:avoid;
+  }
+  .bq{background:transparent;border-left-width:2px}
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+<article>
+
+  <!-- DOCUMENT HEADER -->
+  <header class="doc-header">
+    <div class="header-lockup">
+      <div class="logo-postman-tile">
+        <!-- Postman wordmark SVG (white + orange, fits on dark tile) -->
+        <svg viewBox="0 0 381.5 115" xmlns="http://www.w3.org/2000/svg" aria-label="Postman">
+          <circle fill="#fff" cx="57.06" cy="58.1" r="51.39"/>
+          <path fill="#ff6c37" d="M139.84,73.66V41a1.27,1.27,0,0,1,.46-1,1.74,1.74,0,0,1,1.19-.42h9.2a10.79,10.79,0,0,1,7.48,2.53c1.88,1.69,2.81,4.34,2.81,8v.43c0,3.64-.95,6.3-2.86,8a11,11,0,0,1-7.6,2.55H144V73.66a1.12,1.12,0,0,1-.15.62,1.15,1.15,0,0,1-.45.45,2.77,2.77,0,0,1-1.43.39,2.81,2.81,0,0,1-1.44-.39,1.17,1.17,0,0,1-.47-.44A1.27,1.27,0,0,1,139.84,73.66Zm4.08-16h6.6a6.2,6.2,0,0,0,2.56-.37,6.4,6.4,0,0,0,2.19-1.36,7.13,7.13,0,0,0,1.67-5.18v-.59A7.13,7.13,0,0,0,155.27,45a6.22,6.22,0,0,0-2.19-1.35,6.37,6.37,0,0,0-2.56-.37H144Z"/>
+          <path fill="#ff6c37" d="M175.27,64.81V50.16q0-5.47,2.84-8a12.68,12.68,0,0,1,15.25,0c1.91,1.71,2.86,4.39,2.87,8V64.81c0,3.67-.95,6.35-2.87,8a12.63,12.63,0,0,1-15.27,0C176.21,71.15,175.27,68.49,175.27,64.81Zm4.09,0q0,6.9,6.37,6.91a6.35,6.35,0,0,0,2.55-.37A6.16,6.16,0,0,0,190.47,70a7.18,7.18,0,0,0,1.68-5.18V50.16a7.13,7.13,0,0,0-.33-2.75A7.21,7.21,0,0,0,190.47,45a6.35,6.35,0,0,0-4.75-1.73c-4.25,0-6.36,2.31-6.36,6.9Z"/>
+          <path fill="#ff6c37" d="M210.69,70.11a2.47,2.47,0,0,1,.55-1.5,1.65,1.65,0,0,1,.51-.51,1.53,1.53,0,0,1,.68-.23,2,2,0,0,1,1.12.62c.45.4.92.85,1.41,1.34a6.35,6.35,0,0,0,2.3,1.37,9.43,9.43,0,0,0,3.56.6,7.42,7.42,0,0,0,5-1.53,5.56,5.56,0,0,0,1.81-4.49,6.07,6.07,0,0,0-.38-2.35,5.81,5.81,0,0,0-1.27-2,11,11,0,0,0-4-2.55c-1.57-.58-3.13-1.18-4.75-1.87a10.09,10.09,0,0,1-4-3.06,8.32,8.32,0,0,1-1.65-5.33,9.64,9.64,0,0,1,1-4.45,6.81,6.81,0,0,1,2.6-2.85,13.49,13.49,0,0,1,3.38-1.4,15.26,15.26,0,0,1,3.75-.44,18.76,18.76,0,0,1,5.76.87c1.83.6,2.76,1.4,2.76,2.37a2.72,2.72,0,0,1-.49,1.46,1.39,1.39,0,0,1-.53.57A1.49,1.49,0,0,1,229,45a16.5,16.5,0,0,1-2.18-.87,10.87,10.87,0,0,0-4.52-.93,8.59,8.59,0,0,0-4.75,1.19,4.27,4.27,0,0,0-1.83,3.85,4.34,4.34,0,0,0,.37,2,4.44,4.44,0,0,0,1.23,1.64,12.6,12.6,0,0,0,4,2.21c1.58.56,3.15,1.19,4.75,1.9a10.12,10.12,0,0,1,4,3.43,10.28,10.28,0,0,1,1.64,6q0,5-2.92,7.57a11.28,11.28,0,0,1-7.72,2.55,13.81,13.81,0,0,1-7.32-1.82C211.68,72.49,210.69,71.29,210.69,70.11Z"/>
+          <path fill="#ff6c37" d="M243.86,41.36a2.06,2.06,0,0,1,.39-1.25,1.16,1.16,0,0,1,.46-.42,1.18,1.18,0,0,1,.61-.13h19.8a1.18,1.18,0,0,1,.61.13,1.23,1.23,0,0,1,.46.42,2.2,2.2,0,0,1,.39,1.25,2.3,2.3,0,0,1-.39,1.33,1.14,1.14,0,0,1-.46.44,1.18,1.18,0,0,1-.61.13h-7.78v30.4a1.12,1.12,0,0,1-.15.62,1.15,1.15,0,0,1-.45.45,2.77,2.77,0,0,1-1.43.39,2.81,2.81,0,0,1-1.44-.39,1.21,1.21,0,0,1-.45-.45,1.32,1.32,0,0,1-.15-.62V43.26h-7.89a1.09,1.09,0,0,1-.61-.13,1.14,1.14,0,0,1-.46-.41A2.29,2.29,0,0,1,243.86,41.36Z"/>
+          <path fill="#ff6c37" d="M280.44,73.66v-32a1.82,1.82,0,0,1,.31-1.32,1.79,1.79,0,0,1,1.15-.72,2.29,2.29,0,0,1,.64,0c1.3,0,2.37.86,3.27,2.58l7.63,14.64,7.69-14.64c.94-1.72,2-2.58,3.25-2.58a1.76,1.76,0,0,1,2,1.47v0a1.46,1.46,0,0,1,0,.51v32a1.32,1.32,0,0,1-.15.62,1.15,1.15,0,0,1-.45.45,2.82,2.82,0,0,1-1.44.4,2.78,2.78,0,0,1-1.43-.4,1.15,1.15,0,0,1-.45-.45,1.12,1.12,0,0,1-.15-.62V48.12L295,61.93a1.75,1.75,0,0,1-.62.85,1.49,1.49,0,0,1-1.92,0,1.73,1.73,0,0,1-.57-.83l-7.34-14V73.66a1.22,1.22,0,0,1-.16.62,1.19,1.19,0,0,1-.44.45,2.55,2.55,0,0,1-1.38.45,2.47,2.47,0,0,1-1.43-.39,1.16,1.16,0,0,1-.52-.46A1.2,1.2,0,0,1,280.44,73.66Z"/>
+          <path fill="#ff6c37" d="M320.38,73.44a1.37,1.37,0,0,1,.09-.4l10-32c.29-.94,1.1-1.42,2.48-1.42s2.2.48,2.48,1.42l10,32.2a.54.54,0,0,0,0,.18.33.33,0,0,1,0,.14,1.36,1.36,0,0,1-.23.7,1.43,1.43,0,0,1-.57.49,3.17,3.17,0,0,1-1.78.47,1.33,1.33,0,0,1-.89-.19,1.35,1.35,0,0,1-.57-.72l-2.13-7.12H326.45l-2.13,7.11a1.32,1.32,0,0,1-.57.74,1.27,1.27,0,0,1-.91.2,3,3,0,0,1-1.65-.49,1.35,1.35,0,0,1-.59-.52A1.32,1.32,0,0,1,320.38,73.44Zm7.06-9.75h10.88l-5.45-18.18Z"/>
+          <path fill="#ff6c37" d="M359.49,73.66V41c0-.93.67-1.41,2-1.41a2.66,2.66,0,0,1,1.73.6,6.32,6.32,0,0,1,1.38,2l12.12,23.74V41a1.21,1.21,0,0,1,.16-.61,1.24,1.24,0,0,1,.44-.44,3,3,0,0,1,1.44-.36,3,3,0,0,1,1.43.36,1.27,1.27,0,0,1,.45.44,1.32,1.32,0,0,1,.16.61V73.66a1.13,1.13,0,0,1-.16.62,1.08,1.08,0,0,1-.45.45,2.51,2.51,0,0,1-1.43.39,2.91,2.91,0,0,1-2.58-1.85L363.57,48.81V73.66a1.18,1.18,0,0,1-.6,1.07,2.84,2.84,0,0,1-2.87,0,1.17,1.17,0,0,1-.46-.45A1.21,1.21,0,0,1,359.49,73.66Z"/>
+          <path fill="#ff6c37" d="M64.46,1.46A56.5,56.5,0,1,0,113.38,64.7,56.57,56.57,0,0,0,64.46,1.46ZM76.11,36.71a4,4,0,0,0-2.8,1.18l-21,21-4.48-4.48C68.52,33.77,72.26,33.57,76.11,36.71ZM53.17,59.59l20.94-20.9a2.92,2.92,0,0,1,4.78,1,3,3,0,0,1,.2,1.16A2.86,2.86,0,0,1,78.81,42a3,3,0,0,1-.71.95L55.94,62.36Zm1.56,3.27L49.54,64a.22.22,0,0,1-.18,0,.28.28,0,0,1-.14-.12.29.29,0,0,1,0-.18.38.38,0,0,1,.08-.17l3-3ZM41.51,60.7,47,55.18l4.15,4.13-9.34,2a.31.31,0,0,1-.23,0,.37.37,0,0,1-.17-.16.35.35,0,0,1,0-.22A.33.33,0,0,1,41.51,60.7ZM24.31,89.23a.33.33,0,0,1-.18-.08A.36.36,0,0,1,24,89a.27.27,0,0,1,0-.2.4.4,0,0,1,.09-.17l4.46-4.46,5.77,5.76Zm11.44-5.92a1.11,1.11,0,0,0-.48.5,1.05,1.05,0,0,0-.07.7l.95,4.07a.58.58,0,0,1,0,.37.55.55,0,0,1-.25.27.53.53,0,0,1-.37.07.59.59,0,0,1-.33-.15l-5.79-5.78L47.1,65.65l8.59-1.84,4.12,4.12c-5.93,5.17-14,10.35-24.06,15.37ZM60.64,67.17l-4-4L78.84,43.79a3.53,3.53,0,0,0,.56-.6c-.7,6.34-9.57,15.28-18.75,24ZM77.88,36.74a8.58,8.58,0,0,1,11.6-12.63L81.87,31.7a.71.71,0,0,0-.12.18.51.51,0,0,0,0,.44.71.71,0,0,0,.12.18l5.88,5.87a8.58,8.58,0,0,1-9.86-1.63Zm12.16,0a8,8,0,0,1-1.28,1L83.07,32.1l7.23-7.22A8.57,8.57,0,0,1,90,36.74Z"/>
+        </svg>
+      </div>
+    </div>
+
+    <p class="kicker">Postman Customer Success Engineering &mdash; Demo</p>
+    <h1 class="doc-title">Compile-Time API Assertions</h1>
+    <p class="doc-intro">A pre-merge contract gate that runs your Postman collection against the real service, in the runner, before you deploy.</p>
+    <div class="doc-meta">
+      <span>Postman Customer Success Engineering demo</span>
+      <span>Repo: postman-cs/postman-compile-time-assertions-demo</span>
+    </div>
+  </header>
+
+  <!-- SECTION 00: AT A GLANCE -->
+  <div class="section">
+    <div class="section-header">
+      <span class="sec-no">00</span>
+      <span class="eyebrow">At a glance</span>
+    </div>
+    <hr class="section-rule">
+    <table class="glance-table">
+      <tbody>
+        <tr>
+          <td class="gl-label">What it is</td>
+          <td class="gl-value">A pre-merge CI gate: the compiled service runs in the GitHub Actions runner while the Postman CLI fires the contract collection against it.</td>
+        </tr>
+        <tr>
+          <td class="gl-label">What it proves</td>
+          <td class="gl-value">The running service still matches its OpenAPI contract &mdash; every required field, every declared status code, every response schema &mdash; before the PR merges.</td>
+        </tr>
+        <tr>
+          <td class="gl-label">Where it runs</td>
+          <td class="gl-value">The GitHub Actions runner, against a Docker-built service on <code>localhost</code>. No deployed environment required.</td>
+        </tr>
+        <tr>
+          <td class="gl-label">When it fails</td>
+          <td class="gl-value">A response stops matching the spec &mdash; a required field is dropped, a schema type drifts, an undocumented status code appears.</td>
+        </tr>
+        <tr>
+          <td class="gl-label">Cost</td>
+          <td class="gl-value">Seconds once the image is cached. The Docker build dominates the first run; the contract run itself is fast.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SECTION 01: THE IDEA -->
+  <div class="section" id="the-idea">
+    <div class="section-header">
+      <span class="sec-no">01</span>
+      <h2>The Idea</h2>
+    </div>
+    <hr class="section-rule">
+
+    <p>A collection that replays the happy-path flow proves the flow you intended works. It does not prove the compiled service actually behaves to spec. The collection asserts the journey ran; it does not assert the shape of every response.</p>
+
+    <p>To assert runtime correctness you build the service in your runner, mount it, and run the contract collection against the running process. That catches drift before the PR ever merges &mdash; before any deploy to a gateway or APIM, before any downstream consumer can observe a broken contract.</p>
+
+    <p>This came out of a conversation with Andrew about what a Postman collection actually proves. The observation:</p>
+
+    <blockquote class="bq">
+      You compile, mount, run the collection against the runtime in the runner, and if it passes, then you push.
+      <span class="attr">Paraphrased &mdash; conversation with Andrew, CSE</span>
+    </blockquote>
+
+    <p>The insight is small but load-bearing. The spec authors intent. The collection replays behavior. Combining them &mdash; running the collection against a freshly compiled image in CI &mdash; closes the gap between what the spec says and what the binary does.</p>
+  </div>
+
+  <!-- SECTION 02: THE LOOP -->
+  <div class="section" id="the-loop">
+    <div class="section-header">
+      <span class="sec-no">02</span>
+      <h2>The Loop</h2>
+    </div>
+    <hr class="section-rule">
+
+    <p>Each PR triggers this sequence end to end:</p>
+
+    <ol class="flow-list">
+      <li><strong>Spec as source of truth.</strong> The OpenAPI document governs what the service is allowed to return. Managed Postman actions generate a baseline collection, a smoke collection (curated journey), and a contract collection directly from the spec.</li>
+      <li><strong>CI builds the service.</strong> GitHub Actions runs <code>docker compose up --build</code> inside the runner, bringing the Flask service up on <code>http://127.0.0.1:8080</code>. No external environment is involved.</li>
+      <li><strong>Postman CLI replays the collections.</strong> The smoke run fires first, asserting the journey (status codes, response presence, ID chaining). The contract run follows, validating every response body against the full OpenAPI schema.</li>
+      <li><strong>Schema mismatch reds the check.</strong> If any response body fails the OpenAPI schema validator, the PR check goes red and the branch is blocked from merging.</li>
+      <li><strong>Teardown leaves no residue.</strong> An <code>always()</code> step in the workflow tears down the Postman workspace and mock created during the run. The runner exits clean.</li>
+    </ol>
+  </div>
+
+  <!-- SECTION 03: TWO LAYERS, ONE RUN -->
+  <div class="section" id="two-layers">
+    <div class="section-header">
+      <span class="sec-no">03</span>
+      <h2>Two Layers, One Run</h2>
+    </div>
+    <hr class="section-rule">
+
+    <p>The gate runs two collections in sequence. They are independent assets with different jobs.</p>
+
+    <div class="panel-grid">
+      <div class="panel">
+        <div class="panel-heading">Layer 1</div>
+        <h3>Smoke &mdash; curated journey</h3>
+        <p class="panel-body">The human-authored workflow asset. Documents the intended happy path and is the thing another team forks to understand how your API works.</p>
+        <ul>
+          <li>Asserts the journey runs: 2xx responses, response bodies present, IDs chain between requests</li>
+          <li>Validates flow, sequence, and coarse correctness</li>
+          <li>Stays green even when a required field is quietly dropped from the response</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <div class="panel-heading">Layer 2</div>
+        <h3>Contract &mdash; the drift detector</h3>
+        <p class="panel-body">Generated from the spec. Validates every response body against the full OpenAPI schema, including required fields, types, and formats.</p>
+        <ul>
+          <li>Catches any response that diverges from the declared schema</li>
+          <li>Flags missing required fields, wrong types, undeclared properties</li>
+          <li>Goes red when the service drifts, even if the journey still succeeds</li>
+        </ul>
+      </div>
+    </div>
+
+    <p>The demo proves this independence directly: remove the required <code>price.currency</code> field from the Flask service response. The contract run goes red &mdash; it enforces the schema and sees the violation. The smoke run stays green &mdash; it never asserts <code>price.currency</code>. Two collections, two different failure classes, one run.</p>
+  </div>
+
+  <!-- SECTION 04: DO BOTH -->
+  <div class="section" id="do-both">
+    <div class="section-header">
+      <span class="sec-no">04</span>
+      <h2>Do Both &mdash; and Why</h2>
+    </div>
+    <hr class="section-rule">
+
+    <div class="panel note">
+      <div class="panel-title">Pre-merge and post-deploy cover different failure classes</div>
+      <p class="panel-body">The pre-merge gate is fast and cheap and blocks the merge. It runs against <code>localhost</code> with stubbed upstreams, so it cannot see environment-specific configuration failures, IAM permission gaps, network routing errors, or failures that depend on real downstream dependencies.</p>
+      <p class="panel-body">The post-deploy run of the same collection, fired against the live deployed service, catches those. Real auth, real infrastructure, real response times &mdash; that run exercises everything the pre-merge gate cannot reach.</p>
+      <p class="panel-body">The pre-merge gate is necessary and fast. The post-deploy run is necessary and broad. Run the collection in both places.</p>
+    </div>
+  </div>
+
+  <!-- SECTION 05: RUN IT -->
+  <div class="section" id="run-it">
+    <div class="section-header">
+      <span class="sec-no">05</span>
+      <h2>Run It</h2>
+    </div>
+    <hr class="section-rule">
+
+    <div class="panel win">
+      <div class="panel-title">Two clicks to see it work</div>
+      <p class="panel-body"><strong>(a) Open any pull request</strong> against <code>postman-cs/postman-compile-time-assertions-demo</code>. The <em>Contract Gate</em> check builds the Flask service in Docker and runs the smoke and contract collections against it on <code>localhost</code>. Green means the compiled service matches the spec.</p>
+      <p class="panel-body"><strong>(b) Open the <code>demo/contract-break</code> PR.</strong> That branch drops the required <code>price.currency</code> field from the service response. The contract check goes red on <em>OpenAPI schema validation failed</em>. The smoke check stays green. The PR is blocked.</p>
+      <p class="panel-body">Repo: <code>postman-cs/postman-compile-time-assertions-demo</code></p>
+    </div>
+  </div>
+
+  <!-- VALIDATED BOX -->
+  <div class="validated-box">
+    <div class="vb-label">Validated</div>
+    <ul>
+      <li>spec passes governance lint</li>
+      <li>smoke-flow resolves 2 operations / 12 assertions</li>
+      <li>contract validator enforces required price.currency</li>
+      <li>teardown deletes the workspace and mock (zero residue)</li>
+      <li>built on Node 24 / Flask / Docker Compose / Postman CLI (not Newman)</li>
+    </ul>
+  </div>
+
+  <!-- DOCUMENT FOOTER -->
+  <footer class="doc-footer">
+    <div class="brand">
+      <div class="brand-dot"></div>
+      Postman Customer Success Engineering
+    </div>
+    <span>postman-cs/postman-compile-time-assertions-demo</span>
+  </footer>
+
+</article>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,5 @@
+# Minimal actionlint config. The workflows reference org-published composite
+# actions (postman-cs/postman-*-action@v0); no custom runner labels or self-hosted
+# config are needed here.
+self-hosted-runner:
+  labels: []

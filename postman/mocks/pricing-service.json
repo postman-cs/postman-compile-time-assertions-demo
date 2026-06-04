@@ -1,0 +1,16 @@
+{
+  "version": "1.0",
+  "name": "pricing-service",
+  "protocol": "http",
+  "port": 9102,
+  "mockSrc": "pricing-service.js",
+  "autoRestartOnChange": true,
+  "routes": [
+    { "method": "GET", "path": "/prices/:sku" }
+  ],
+  "logging": {
+    "level": "info",
+    "showRequestBody": false,
+    "showResponseBody": false
+  }
+}

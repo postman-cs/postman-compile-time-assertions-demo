@@ -1,0 +1,25 @@
+name: Teardown Postman residue
+
+# Backstop cleanup. The contract-gate workflow tears down its own workspace in an
+# always() step, so this is only needed if a run was hard-killed before that step
+# (cancelled mid-build, runner died). It sweeps every workspace whose name starts
+# with the prefix, plus that workspace's team-scoped mocks. Safe because the demo
+# names its workspaces "cta-demo-<run>-<attempt>", unique to this demo.
+
+on:
+  workflow_dispatch:
+    inputs:
+      name-prefix:
+        description: Delete every workspace whose name starts with this prefix (plus its mocks)
+        required: true
+        default: cta-demo-
+
+jobs:
+  teardown:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sweep stray workspaces
+        env:
+          POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
+        run: node scripts/teardown-postman.mjs --name-prefix="${{ inputs.name-prefix }}"

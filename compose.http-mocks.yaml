@@ -1,0 +1,15 @@
+# Override for the documented UPSTREAM_MODE=http variant. Run with:
+#   docker compose -f compose.yaml -f compose.http-mocks.yaml up -d --build
+# alongside the two `postman mock run` servers (see README "Mocking upstreams").
+#
+# The mock .js servers must bind 0.0.0.0 so the container can reach them through
+# host.docker.internal:host-gateway (binding 127.0.0.1 on the host would be
+# unreachable from inside the container).
+services:
+  api:
+    environment:
+      UPSTREAM_MODE: http
+      ACCOUNT_API_BASE_URL: http://host.docker.internal:9101
+      PRICING_API_BASE_URL: http://host.docker.internal:9102
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

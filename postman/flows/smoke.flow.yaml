@@ -1,0 +1,38 @@
+spec:
+  fileName: openapi.yaml
+  title: Subscription Decision Service
+  version: 1.0.0
+flows:
+  - name: Subscription Decision Service happy path
+    type: smoke
+    steps:
+      - stepKey: create-decision-1
+        operationId: createDecision
+        name: Create a subscription decision
+        bindings:
+          - fieldKey: customerId
+            source: example
+          - fieldKey: sku
+            source: example
+        extract:
+          - variable: createDecision.decisionId
+            jsonPath: $.decisionId
+          - variable: createDecision.eligible
+            jsonPath: $.eligible
+          - variable: createDecision.amount
+            jsonPath: $.price.amount
+          - variable: createDecision.reason
+            jsonPath: $.reasons[0]
+      - stepKey: get-decision-2
+        operationId: getDecision
+        name: Get the decision by id
+        bindings:
+          - fieldKey: decisionId
+            source: prior_output
+            sourceStepKey: create-decision-1
+            variable: createDecision.decisionId
+        extract:
+          - variable: getDecision.decisionId
+            jsonPath: $.decisionId
+          - variable: getDecision.amount
+            jsonPath: $.price.amount

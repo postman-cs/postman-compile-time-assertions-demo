@@ -1,0 +1,16 @@
+{
+  "version": "1.0",
+  "name": "account-service",
+  "protocol": "http",
+  "port": 9101,
+  "mockSrc": "account-service.js",
+  "autoRestartOnChange": true,
+  "routes": [
+    { "method": "GET", "path": "/accounts/:customerId" }
+  ],
+  "logging": {
+    "level": "info",
+    "showRequestBody": false,
+    "showResponseBody": false
+  }
+}
