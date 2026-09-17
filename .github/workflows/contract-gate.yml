@@ -23,6 +23,8 @@ jobs:
       UPSTREAM_MODE: stub
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       # --- Onboard Postman assets (managed CSE actions) ---------------------
       - id: token
