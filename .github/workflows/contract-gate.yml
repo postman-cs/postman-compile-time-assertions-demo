@@ -17,6 +17,7 @@ concurrency:
 jobs:
   contract-gate:
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     env:
       # Unique per run so concurrent or re-run jobs never collide on the shared team.
       PROJECT_NAME: cta-demo-${{ github.run_id }}-${{ github.run_attempt }}
